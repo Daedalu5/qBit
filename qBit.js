@@ -79,22 +79,6 @@
 				},
 				is_object : function(input){
 					return typeof(input)==='object' && input.length === undefined;
-				},
-				each : function(collection,handler){
-					if(qBit.c.collections.is_array(collection)){
-						for(var i = 0; i<collection.length;i++){
-							if(handler.apply(collection[i],[i,collection[i]])){
-								break;
-							}
-						}
-					}else if(qBit.c.collections.is_object(collection)){
-						for(var name in collection){
-							if(handler.apply(collection[name],[name,collection[name]])){
-								break;
-							}
-						}
-					}
-					return this;
 				}
 			},
 			/**
@@ -192,7 +176,6 @@
 				var indexOf = string.substring(pos || 0).search(regex);
     			return (indexOf >= 0) ? (indexOf + (pos || 0)) : indexOf;
 			},
-			hooks : {},
 			/**
 			 * La gestion des modules qBit
 			 */
@@ -215,7 +198,7 @@
 					var checkDependencies = function(module){
 						var error = 0;
 						if(module.dependencies)
-						qBit.c.collections.each(module.dependencies,function(name,value){
+						jQuery.each(module.dependencies,function(name,value){
 							if(name,qBit.c.modules.imported[name]){
 								if(value != 'X'){
 									var splitter = value.split('.'),splitter2 = qBit.c.modules.imported[name].split('.'), flag = false;
@@ -751,7 +734,7 @@
 		updateStructure : function(newStructure){
 			var root = this, $root = jQuery(this);;
 			var options = arguments[1];
-			qBit.c.collections.each(newStructure,function(name,value){
+			jQuery.each(newStructure,function(name,value){
 				if (name.indexOf('#') == 0) {
 					var tagName = name.substring(1,qBit.c.regexIndexOf(name,/[0-9]+/g)),inputs = {};
 					if(tagName == "input"){
@@ -1040,25 +1023,6 @@
 			var componentDef = {"type":type,"structure":structure,"datas":datas};
 			qBit.s.components[type]=componentDef;
 			return componentDef;
-		},
-		/**
-		 * Scanner de HTML pour recuperation de structure qBit
-		 */
-		scanStructure : function(mainStructure){
-			var root = this, $root = jQuery(this),structure = {},datas = {},counts = {};
-			jQuery.each($root.children(),function(index,element){
-				var comp = element, $comp = jQuery(element);
-				var tagName = '#'+comp.tagName.toLowerCase();
-				if(counts.tagName){
-					counts.tagName = counts.tagName + 1;
-				}else{
-					counts.tagName = 0;
-				}
-				tagName+=counts.tagName;
-				structure[tagName] = qBit(element).scanStructure();
-				return ;
-			});
-			return structure;
 		}
 	};
 	qBit.c.modules.dependencies('structure',sBit);

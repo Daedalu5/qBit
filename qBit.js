@@ -73,48 +73,6 @@
 			noop : function() {
 				//n00p
 			},
-			/**
-			 * Le GUID de l'instance qBit
-			 */
-			guid : "",
-			/**
-			 * Génère automatiquement les préfixes CSS de manière "crossbrowser"
-			 */
-			prefix : function() {
-				if (qBit.c.browser.mozilla) {
-					return "-moz-";
-				} else if (qBit.c.browser.msie) {
-					return "-ms-";
-				} else if (qBit.c.browser.webkit) {
-					return "-webkit-";
-				}
-			},
-			selectors : {
-				filter : function(expr,elems){
-					return elems.length ===1 ? Sizzle.matchesSelector(elems[0],expr)?[elems[0]] : [] : Sizzle.matches(expr,elems);
-				}
-			},
-			extend : function(target){
-				var target = arguments[0] || {}, i = 1, length = arguments.length, curr, src, copy, clone;
-				for(;i<length;i++){
-					if((curr = arguments[i]) != null){
-						for(var name in curr){
-							src = target[name];
-							copy = curr[name];
-							if(target===copy){
-								continue;
-							}
-							if(copy && qBit.c.collections.is_object(copy)){
-								clone = src || {};
-								target[name] = qBit.c.extend(clone,copy);
-							}else if(copy !== undefined){
-								target[name] = copy;
-							}
-						}
-					}
-				}
-				return target
-			},
 			collections : {
 				is_array : function(input){
 					return typeof(input)==="object" && (input instanceof Array);
@@ -210,21 +168,6 @@
 				}
 			},
 			/**
-			 * TODO : un script qui modifie le css pour le faire suporter par le navigateur courant
-			 */
-			crossbrowser : function(){
-				var $styles = Sizzle('style');
-				$styles.each(function(index,element){
-					var ss = element,rules;
-					if(browser.msie){
-						rules = ss.rules;
-					}else{
-						rules = ss.cssRules;
-					}
-					console.log(rules);
-				});
-			},
-			/**
 			 * Les informations sur l'instance qBit
 			 */
 			nfo : function() {
@@ -259,10 +202,10 @@
 				// rend publiques les methodes enonces dans l'entete de module
 				makePublic : function(module){
 					if(module['public'])
-					qBit.c.collections.each(module['public'],function(index,entry){
+					jQuery.each(module['public'],function(index,entry){
 						var obj = {};
 						obj[entry] = module[entry];
-						qBit.c.extend(qBit,obj);
+						jQuery.extend(qBit,obj);
 					});
 				},
 				/**
@@ -325,78 +268,6 @@
 
 		return qBit;
 	})(window, jQuery);
-
-	/**
-	 * L'api de gestion temporelle des actions
-	 */
-	 
-	// var tBit = {
-		/**
-		 * Constructeur par défaut pour le scrutateur temporel
-		 * appliquer sur une méthode, il permet l'execution en simultané d'actions
-		 * (exemple : l'utilisation d'une scrutateur sur la méthode de capture d'appui long  permet d'appliquer une méthode pendant le temps d'appui sur la touche (une barre de progression))
-		 */
-		// pollScrutineer : function(handler, pollTime, data) {
-			// sauvegarde d'un alias d'instance pour les interval
-			// var instance = this;
-			/**
-			 * "Suppression" de l'instance courante par auto destruction
-			 */
-			// this.destroy = function() {
-				// this.stop();
-				// for (key in this) {
-					// this[key] = null;
-				// }
-			// };
-			/**
-			 * Méthode de mise en pause du scrutateur
-			 */
-			// this.stop = function() {
-				// clearInterval(this._interval);
-			// };
-			/**
-			 * Méthode de reprise du scrutateur
-			 */
-			// this.begin = function(a) {
-				// if (a) {
-					// jQuery.extend(true, this._data, a);
-				// }
-				// this._interval = setInterval(function() {
-					// instance._time += instance._pollTime;
-					// handler.apply(document, [instance._time]);
-				// }, pollTime);
-			// };
-			/**
-			 * Méthode de RAZ de scrutateur
-			 */
-			// this.reset = function() {
-				// delete this._interval;
-				// this._init();
-			// };
-			/**
-			 * Methode de recuperation du temps ecouler grace au scrutateur
-			 */
-			// this.getTime = function() {
-				// return this._time;
-			// };
-			/**
-			 * "Constructeur" par défaut du scrutateur
-			 */
-			// this._init = function() {
-				// this._pollTime = pollTime;
-				// this._time = 0
-				// this._interval = 0;
-				// this._data = {};
-				// if (data) {
-					// this._data = data;
-				// }
-				// clearInterval(this._interval);
-				// return this;
-			// };
-			// return this._init();
-		// }
-	// };
-	// jQuery.extend(qBit.t, tBit);
 
 	/**
 	 * L'api de gestion des événements de souris pour qBit /!\  /!\

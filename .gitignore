@@ -17,6 +17,8 @@ local.properties
 .loadpath
 *.html
 *.css
+Benchmark.js
+qBit.min.js
 
 # External tool builders
 .externalToolBuilders/

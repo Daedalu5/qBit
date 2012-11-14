@@ -29,16 +29,12 @@
 			 */
 			init : function(selector, context) {
 				// retourne l'instance qBit courante
-				if (!selector) {
-					return qBit;
-				} else {
-					if(typeof selector === 'string' && selector.indexOf('&')==0){
-						// si &(w+), retourne la reference de l'objet
-						return qBit.s.getComponentByReference(selector.substring(1));
-					}else{
-						// si ^[^&](w+), on recherche par selector sizzle
-						return jQuery.extend(jQuery(selector, context), qBit);
-					}
+				if(typeof selector === 'string' && selector.indexOf('&')==0){
+					// si &(w+), retourne la reference de l'objet
+					return qBit.s.getComponentByReference(selector.substring(1));
+				}else{
+					// si ^[^&](w+), on recherche par selector sizzle
+					return jQuery.extend(jQuery(selector, context), qBit);
 				}
 			},
 			/**
@@ -74,11 +70,21 @@
 				//n00p
 			},
 			collections : {
+				// eponyme
 				is_array : function(input){
 					return typeof(input)==="object" && (input instanceof Array);
 				},
+				// eponyme
 				is_object : function(input){
 					return typeof(input)==='object' && input.length === undefined;
+				},
+				// eponyme
+				is_DOMElement : function(input){
+					 return (typeof HTMLElement === "object" ? o instanceof HTMLElement : o && typeof o === "object" && o.nodeType === 1 && typeof o.nodeName==="string");
+				},
+				// eponyme
+				is_DOMNode : function(input){
+					return (typeof Node === "object" ? o instanceof Node : o && typeof o === "object" && typeof o.nodeType === "number" && typeof o.nodeName==="string");
 				}
 			},
 			/**
@@ -176,18 +182,29 @@
 				var indexOf = string.substring(pos || 0).search(regex);
     			return (indexOf >= 0) ? (indexOf + (pos || 0)) : indexOf;
 			},
+			deepPenetration : function(string){
+				var splitter = string.split("."),temp = this;
+				for(var i=0;i<splitter.length;i++){
+					temp = temp[splitter[i]];
+					if(!temp){
+						break;
+					}
+				}
+				return temp;
+			},
 			/**
 			 * La gestion des modules qBit
 			 */
 			modules : {
 				// les modules deja importes
 				imported : {"core":""},
-				// rend publiques les methodes enonces dans l'entete de module
+				// rend publiques les methodes enoncees dans l'entete de module
 				makePublic : function(module){
 					if(module['public'])
 					jQuery.each(module['public'],function(index,entry){
 						var obj = {};
-						obj[entry] = module[entry];
+						var splitter = entry.split(".");
+						obj[splitter[splitter.length-1]] = qBit.c.deepPenetration.apply(module,[entry]);
 						jQuery.extend(qBit,obj);
 					});
 				},
@@ -196,13 +213,13 @@
 				 */
 				dependencies : function(moduleName,source,varIn){
 					var checkDependencies = function(module){
-						var error = 0;
+						var error = 0,splitter,i;
 						if(module.dependencies)
 						jQuery.each(module.dependencies,function(name,value){
 							if(name,qBit.c.modules.imported[name]){
 								if(value != 'X'){
-									var splitter = value.split('.'),splitter2 = qBit.c.modules.imported[name].split('.'), flag = false;
-									for(var i = 0;i<splitter.length;i++){
+									splitter = value.split('.'),splitter2 = qBit.c.modules.imported[name].split('.'), flag = false;
+									for(i = 0;i<splitter.length;i++){
 										if(splitter[i]!='X' && parseInt(splitter[i],10)>parseInt(splitter2[i],10)){
 											flag = true;
 											error++;
@@ -258,6 +275,7 @@
 	var mBit = {
 		"name" : "mouse",
 		"version" : "0.2.0a",
+		"namespace" : "m",
 		"dependencies" : {
 			"core" : "0.1.X"
 		},
@@ -331,20 +349,20 @@
 			this._init($ctx,selector,UIOptions);
 		},
 		checkCollisions : function(event,mContext){
-			var $box = jQuery(this), pos = $box.position(), rw = $box.width(), rh = $box.height(), ctx = mContext || qBit.m.contexts, ret;
+			var $box = jQuery(this), pos = $box.position(), rw = $box.width(), rh = $box.height(), ctx = mContext || qBit.m.contexts,ret,element,tw,th,posi,rw2,rh2,tx,ty,rx,ry,t;
 			for(var j = 0; j<ctx.length;j++){
 				var matrix = [], context = ctx[j];
 				for(var i = 0; i < context._components.length;i++){
-					var element = context._components[i]._element, tw = jQuery(element).width(), th = jQuery(element).height(), posi = jQuery(element).position(), rw2 = rw, rh2 = rh;
+					element = context._components[i]._element; tw = jQuery(element).width(); th = jQuery(element).height(); posi = jQuery(element).position(); rw2 = rw; rh2 = rh;
 					if (rw <= 0 || rh <= 0 || tw <= 0 || th <= 0) {
 						return;
 					}
-					var tx = posi.left, ty = posi.top, rx = pos.left, ry = pos.top;
+					tx = posi.left; ty = posi.top; rx = pos.left; ry = pos.top;
 					rw2 += rx;
 					rh2 += ry;
 					tw += tx;
 					th += ty;
-					var t = (rw2 < rx || rw2 > tx) && (rh2 < ry || rh2 > ty) && (tw < tx || tw > rx) && (th < ty || th > ry);
+					t = (rw2 < rx || rw2 > tx) && (rh2 < ry || rh2 > ty) && (tw < tx || tw > rx) && (th < ty || th > ry);
 					if(t){
 						matrix.push(context._components[i]);
 						ret = context;
@@ -363,14 +381,15 @@
 		contexts : [],
 		/** 
 		 * Permet l'utilisation de sélection à la souris
-		 * (vérifie les collisions sur les différentes contextes)
+		 * (vérifie les collisions sur les différents contextes)
 		 */
 		selectUI : function(){
+			var position, pos, currentContext, obj;
 			jQuery(document).bind('mousedown',function(event){
-				var position = {"x":event.pageX,"y":event.pageY}, $box = jQuery('<div></div>').appendTo('body').css({"position":"absolute","top":position.y,"left":position.x,"border":"1px dashed #2d8cf8","background-color":"rgba(0,0,255,0.01)","z-index":9999,"cursor":"default"}), pos = $box.position(), currentContext;
+				position = {"x":event.pageX,"y":event.pageY}, $box = jQuery('<div></div>').appendTo('body').css({"position":"absolute","top":position.y,"left":position.x,"border":"1px dashed #2d8cf8","background-color":"rgba(0,0,255,0.01)","z-index":9999,"cursor":"default"}); pos = $box.position()
 				jQuery(this).bind('mousemove',function(event1){
 					if(event1.which == 1){
-						var obj = {};
+						obj = {};
 						if(event1.pageX > position.x){
 							obj["width"] = event1.pageX-position.x;
 						}else{
@@ -412,11 +431,13 @@
 	 * L'api de gestion des événements clavier pour qBit
 	 */
 	var hkBit = {
-		"name" : "hokey",
+		"name" : "hotkey",
 		"version" : "0.1.1a",
+		"namespace" : "hk",
 		"dependencies" : {
 			"core" : "0.1.X"
 		},
+		"public" : ["hotkeys"],
 		/** 
 		 * Previent la propagation de l'evenement de DOM lors de la phase 2 (XBrowser)
 		 * A passer absolument dans un autre module
@@ -450,9 +471,9 @@
 				}
 				if (c) {
 					if (prevented == undefined || (prevented != undefined && prevented)) {
-						preventEvent(event);
+						qBit.hk.preventEvent(event);
 					}
-					handler.apply($elem, [event]);
+					handler.apply($elem, [event,String.fromCharCode(event.keyCode).toLowerCase()]);
 				}
 			});
 		},
@@ -611,11 +632,6 @@
 					if (pressed) {
 						return (false);
 					} else {
-						/*if (scrutineer) {
-							scrutineer.begin({
-								"event" : event
-							});
-						}*/
 						if (onStart) {
 							onStart.apply(document, [event]);
 						}
@@ -623,20 +639,11 @@
 						timeStamp = event.timeStamp;
 						return qBit.hk.hotkey.apply(document, ["keyup." + ns + ".press", key,
 						function(event) {
-							/*if (scrutineer) {
-								scrutineer.stop();
-							}*/
 							return handler.apply(document, [event]);
 						},
 						function(event) {
-							/*if (scrutineer) {
-								scrutineer.stop();
-							}*/
 							jQuery(document).unbind("." + ns + ".press");
 							if (cpt >= oc) {
-								/*if (scrutineer) {
-									scrutineer.destroy();
-								}*/
 								return (false);
 							}
 							cpt++;
@@ -664,9 +671,9 @@
 			pressHandler();
 		},
 		"hotkeys" : function(key,handler,options){
-			var target = ((options!=undefined)?options.target:document);
+			var target = ((options!=undefined)?options.target:document),timeout,namespace,evt,duration,delta,opt,oc,condition,prevent;
 			if(key.indexOf(' ')>-1){
-				var timeout = 1000;
+				timeout = 1000;
 				if(options!=undefined){
 					if(options.timeout){
 						timeout = options.timeout;
@@ -674,7 +681,7 @@
 				}
 				qBit.hk.sequence.apply(target,[key,handler,timeout]);
 			}else if(key.indexOf('->')>-1){
-				var namespace = 'main',duration = 1000, delta = 200, opt = {}, oc = Infinity;
+				namespace = 'main';duration = 1000; delta = 200; opt = {}; oc = Infinity;
 				if(options!=undefined){
 					if(options.namespace){
 						namespace = options.namespace;	
@@ -697,7 +704,9 @@
 				}
 				qBit.hk.pressDuration.apply(target,[namespace,key.substring(0,key.indexOf('->')),duration,handler,delta,opt]);
 			}else{
-				var evt = 'keydown',condition = true,prevent = false;
+				evt = 'keydown';
+				condition = true;
+				prevent = false;
 				if(options!=undefined){
 					if(options.evt){
 						evt = options.evt;	
@@ -709,7 +718,10 @@
 						prevent = options.prevent;
 					}
 				}
-				qBit.hk.hotkey.apply(target,[evt,key,handler,condition,prevent]);
+				var splitter = key.split(',');
+				for(var i = 0; i<splitter.length;i++){
+					qBit.hk.hotkey.apply(target,[evt,splitter[i],handler,condition,prevent]);
+				}
 			}
 			return this;
 		}
@@ -727,16 +739,15 @@
 			"core" : "0.1.X",
 			"hotkeys" : "0.1.X"
 		},
-		"public" : ["updateStructure","expand","component","scanStructure"],
+		"public" : ["updateStructure","expand","component","getComponentByReference"],
 		/**
 		 * Methode centrale du module structure, update Structure
 		 */
 		updateStructure : function(newStructure){
-			var root = this, $root = jQuery(this);;
-			var options = arguments[1];
+			var root = this || document.createElement('div'), $root = jQuery(this), tagName, comp, options = arguments[1], occurences,i;
 			jQuery.each(newStructure,function(name,value){
 				if (name.indexOf('#') == 0) {
-					var tagName = name.substring(1,qBit.c.regexIndexOf(name,/[0-9]+/g)),inputs = {};
+					tagName = name.substring(1,qBit.c.regexIndexOf(name,/[0-9]+/g)),inputs = {};
 					if(tagName == "input"){
 						for(var attr in value){
 							if(attr == 'type'){
@@ -746,7 +757,7 @@
 							}
 						}
 					}
-					var comp = $root.children(tagName).filter(function(){
+					comp = $root.children(tagName).filter(function(){
 						return jQuery(this).data('qBit_structCompId') == name;
 					});
 					
@@ -767,10 +778,10 @@
 							value.apply(this, [event]);
 						});
 					}else{
-						if(options && options.component && typeof value == "string" && value.indexOf('$data.')>-1){
-							var occurences = value.match(componentData);
+						if(options && options.component && typeof value == "string" && qBit.c.regexIndexOf(value,componentData)>-1){
+							occurences = value.match(componentData);
 							if(occurences!=null){
-								var i=occurences.length;
+								i=occurences.length;
 								while(i--){
 									value = value.replace(occurences[i],root.get(0).component._datas[occurences[i].split("$data.")[1]]);
 								}
@@ -844,6 +855,8 @@
 					}
 				}
 			});
+			root = null;$root = null;tagName = null; comp = null;options = null;
+			return this;
 		},
 		/**
 		 * Le principe de contraction qBit 
@@ -953,13 +966,21 @@
 			return result;
 		},
 		/**
-		 * Creer un composant dans qBit : utilisation d'QX (Qbit eXpressions) pour synchroniser datas avec structure
+		 * Creer un composant dans qBit : utilisation d'QX (Qbit eXpressions) pour synchroniser $datas avec structure
 		 */
 		component : function(type,structure,datas,functions,reference){
 			// on maintient toujours une reference vers this pour y acceder facilement depuis les methodes
 			var proxy = (this.get)?this.get(0):this;
+			// echantillonnage pour la modification de datas ou structure en dynamique
+			proxy.sample = function(){
+				// on commence par prendre l'image complete du composant a l'instant t
+				
+			};
 			// met a jour le composant suivant son structure-model et son data-model
-			proxy.update = function(){
+			proxy.update = function(override){
+				if(override){
+					jQuery(proxy).html("");
+				}
 				qBit.s.updateStructure.apply(jQuery(proxy),[proxy._structure,{"component":proxy}]);
 				return proxy;
 			};
@@ -973,9 +994,12 @@
 				}
 			};
 			// getter/setter vers le structure-model
-			proxy.structure = function(modifier){
-				if(modifier){
+			proxy.structure = function(modifier,override){
+				if(modifier && !override){
 					jQuery.extend(true,proxy._structure,modifier);
+					return proxy;
+				}else if(modifier && override){
+					proxy._structure = modifier;
 					return proxy;
 				}else{
 					return proxy._structure;
@@ -983,10 +1007,10 @@
 			};
 			// constructeur de l'objet
 			proxy._init = function(type,structure,datas,functions,reference){
-				var extender = {};
+				var extender = {},funcs,componentDef;
 				proxy._type = type;
 				// si le type de composant est deja repertorie, on va chercher son etat par defaut
-				for(var componentDef in qBit.s.components){
+				for(componentDef in qBit.s.components){
 					if(componentDef == proxy._type){
 						extender = qBit.s.components[componentDef];
 					}
@@ -996,7 +1020,7 @@
 				// on sauvegarder le model de donnes
 				proxy._datas = jQuery.extend(true,extender.datas,datas);
 				// si on a des evenements particulier a binder
-				var funcs = jQuery.extend(true,extender.functions,functions);
+				funcs = jQuery.extend(true,extender.functions,functions);
 				if(funcs && typeof funcs == 'object' && Object.keys(funcs).length!=0){
 					jQuery.each(funcs,function(functionName,func){
 						proxy[functionName] = function(){
@@ -1035,4 +1059,5 @@
 // preparation
 jQuery(function() {
 	jQuery(document).trigger("qbit.refresh");
+	qBit.m.selectUI();
 });
